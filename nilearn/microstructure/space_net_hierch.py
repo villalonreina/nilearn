@@ -31,7 +31,7 @@ from .._utils.compat import _basestring
 from .._utils.fixes import atleast2d_or_csr
 from .._utils.cache_mixin import CacheMixin
 from ..input_data import NiftiMasker
-from .objective_functions import _unmask
+from ..decoding.objective_functions import _unmask
 
 from .space_net_solvers_hierch import (tvl1_solver, _graph_net_logistic,
                                        _graph_net_squared_loss)

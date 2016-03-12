@@ -13,16 +13,17 @@ Regression with spatial priors like TV-L1 and Graph-Net.
 
 from math import sqrt
 import numpy as np
-from .objective_functions import (spectral_norm_squared,
+# I changed the paths here !!! Careful!!!
+from ..decoding.objective_functions import (spectral_norm_squared,
                                   _gradient_id,
                                   _logistic_loss_lipschitz_constant,
                                   _squared_loss, _squared_loss_grad, _unmask,
                                   _logistic_loss_grad,
                                   _logistic as _logistic_loss)
-from .objective_functions import _gradient, _div
-from .proximal_operators import (_prox_l1, _prox_l1_with_intercept,
+from ..decoding.objective_functions import _gradient, _div
+from ..decoding.proximal_operators import (_prox_l1, _prox_l1_with_intercept,
                                  _prox_tvl1, _prox_tvl1_with_intercept)
-from .fista import mfista
+from ..decoding.fista import mfista
 
 
 def _squared_loss_and_spatial_grad(X, y, w, mask, grad_weight):
