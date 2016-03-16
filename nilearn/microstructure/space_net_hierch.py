@@ -35,6 +35,7 @@ from ..decoding.objective_functions import _unmask
 
 from .space_net_solvers_hierch import (tvl1_solver, _graph_net_logistic,
                                        _graph_net_squared_loss)
+import nibabel as nib
 
 # Volume of a standard (MNI152) brain mask in mm^3
 MNI152_BRAIN_VOLUME = 1827243.
@@ -383,16 +384,16 @@ def path_scores(solver, X, y, mask, alphas, l1_ratios, train, test,
     _, n_features = X.shape
     verbose = int(verbose if verbose is not None else 0)
 
-    # Univariate feature screening. Note that if we have only as few as 100
-    # features in the mask's support, then we should use all of them to
-    # learn the model i.e disable this screening)
-    do_screening = (n_features > 100) and screening_percentile < 100.
-    if do_screening:
-        X, mask, support = _univariate_feature_screening(
-            X, y, mask, is_classif, screening_percentile)
-
-    # crop the mask to have a tighter bounding box
-    mask = _crop_mask(mask)
+#    # Univariate feature screening. Note that if we have only as few as 100
+#    # features in the mask's support, then we should use all of them to
+#    # learn the model i.e disable this screening)
+#    do_screening = (n_features > 100) and screening_percentile < 100.
+#    if do_screening:
+#        X, mask, support = _univariate_feature_screening(
+#            X, y, mask, is_classif, screening_percentile)
+#
+#    # crop the mask to have a tighter bounding box
+#    mask = _crop_mask(mask)
 
     # get train and test data
     X_train, y_train = X[train].copy(), y[train].copy()
@@ -477,15 +478,15 @@ def path_scores(solver, X, y, mask, alphas, l1_ratios, train, test,
     if len(test) == 0.:
         all_test_scores.append(np.nan)
 
-    # unmask univariate screening
-    if do_screening:
-        w_ = np.zeros(len(support))
-        if is_classif:
-            w_ = np.append(w_, best_w[-1])
-            w_[:-1][support] = best_w[:-1]
-        else:
-            w_[support] = best_w
-        best_w = w_
+#    # unmask univariate screening
+#    if do_screening:
+#        w_ = np.zeros(len(support))
+#        if is_classif:
+#            w_ = np.append(w_, best_w[-1])
+#            w_[:-1][support] = best_w[:-1]
+#        else:
+#            w_[support] = best_w
+#        best_w = w_
 
     if len(best_w) == n_features:
         if Xmean is None:
@@ -773,10 +774,11 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
                                        mask_strategy='epi', t_r=self.t_r,
                                        memory=self.memory_)
                                        
-        X = self.masker_.fit_transform(X)
+        # X = self.masker_.fit_transform(X)
+        # self.mask_img_ = self.masker_.mask_img_
+        # self.mask_ = self.mask_img_.get_data().astype(np.bool)
         
-        # leave this as it is 
-        self.mask_img_ = self.masker_.mask_img_
+        self.mask_img_  = nib.load(self.masker_.mask_img)
         self.mask_ = self.mask_img_.get_data().astype(np.bool)
         self.mask_length = np.count_nonzero(self.mask_)        
         
@@ -785,7 +787,7 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
         # misc
         self.Xmean_ = X.mean(axis=0)
         self.Xstd_ = X.std(axis=0)
-        n_samples, _ = X_dummy.shape # used in case no cv is needed
+        n_samples, _ = X.shape # used in case no cv is needed
         
         y = np.array(y).copy()
         l1_ratios = self.l1_ratios
@@ -812,7 +814,7 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
             if not self.is_classif or loss == "mse":
                 solver = partial(tvl1_solver, loss="mse")
             else:
-                solver = partial(tvl1_solver, loss="logistic", mask=self.mask_) # changed this here!!
+                solver = partial(tvl1_solver, loss="logistic")
 
         # generate fold indices
         case1 = (None in [alphas, l1_ratios]) and self.n_alphas > 1
@@ -842,8 +844,8 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
 
         # scores & mean weights map over all folds
         self.cv_scores_ = [[] for i in range(n_problems)]
-        w = np.zeros((n_problems, X_dummy.shape[1] + 1))
-        self.all_coef_ = np.ndarray((n_problems, n_folds, X_dummy.shape[1]))
+        w = np.zeros((n_problems, X.shape[1] + 1))
+        self.all_coef_ = np.ndarray((n_problems, n_folds, X.shape[1]))
 
         self.screening_percentile_ = _adjust_screening_percentile(
                 self.screening_percentile, self.mask_img_,

@@ -21,8 +21,8 @@ from ..decoding.objective_functions import (spectral_norm_squared,
                                   _logistic_loss_grad,
                                   _logistic as _logistic_loss)
 from ..decoding.objective_functions import _gradient, _div
-from ..decoding.proximal_operators import (_prox_l1, _prox_l1_with_intercept,
-                                 _prox_tvl1, _prox_tvl1_with_intercept)
+from ..microstructure.proximal_operators_hierch import (_prox_l1, _prox_l1_with_intercept,
+                                 _prox_tvl1, _prox_tvl1_with_intercept_hierch)
 from ..decoding.fista import mfista
 
 
@@ -402,25 +402,25 @@ def _tvl1_objective(X, y, w, alpha, l1_ratio, mask, loss="mse"):
     nsamples, X_nfeatures = X.shape
     nvox = np.count_nonzero(mask)
     measures = X_nfeatures/nvox
-    X_j = X[:, :nvox]
-    out_all = None
+    out_2 = 0.0
+
+    if loss == "mse":
+        out_1 = _squared_loss(X, y, w)
+    else:
+        out_1 = _logistic_loss(X, y, w)
+        w = w[:-1]
+
+    w_j = w[:nvox]
 
     for j in range(measures):
 
-        if loss == "mse":
-            out = _squared_loss(X_j, y, w)
-        else:
-            out = _logistic_loss(X_j, y, w)
-            w = w[:-1]
+        grad_id = _gradient_id(_unmask(w_j, mask), l1_ratio=l1_ratio)
+        out_2 += alpha * _tvl1_objective_from_gradient(grad_id)
 
-        grad_id = _gradient_id(_unmask(w, mask), l1_ratio=l1_ratio)
-        out += alpha * _tvl1_objective_from_gradient(grad_id)
-
-        X_j = X[:, nvox + 1: nvox + nvox]
-
+        w_j = w[nvox:nvox + nvox]
         nvox += nvox
 
-        out_all += out
+    out_all = out_1 + out_2
 
     return out_all
 
@@ -504,18 +504,22 @@ def tvl1_solver(X, y, alpha, l1_ratio, mask, loss=None, max_iter=100,
 
     # in logistic regression, we fit the intercept explicitly
     w_size = X.shape[1] + int(loss == "logistic")
+#    mask_size = np.count_nonzero(flat_mask)
+#    w_size = mask_size + int(loss == "logistic")
 
-    def unmaskvec(w):
+    def unmaskvec(w):  # don't know if the w here will have to be split?
         if loss == "mse":
             return _unmask(w, mask)
         else:
             return np.append(_unmask(w[:-1], mask), w[-1])
 
-    def maskvec(w):
+    def maskvec(w):  # don't know if the w here will have to be split?
         if loss == "mse":
             return w[flat_mask]
         else:
-            return np.append(w[:-1][flat_mask], w[-1])
+            n_measures = len(w[:-1])/len(flat_mask)
+            flat_mask_new = np.tile(flat_mask, n_measures)
+            return np.append(w[:-1][flat_mask_new], w[-1])
 
     # function to compute derivative of f1
     def f1_grad(w):
@@ -544,12 +548,19 @@ def tvl1_solver(X, y, alpha, l1_ratio, mask, loss=None, max_iter=100,
                 max_iter=prox_max_iter, verbose=verbose)
             return maskvec(out.ravel()), info
     else:
+#        def f2_prox(w, stepsize, dgap_tol, init=None):
+#            out, info = _prox_tvl1_with_intercept_hierch(
+#                unmaskvec(w), volume_shape, l1_ratio, alpha * stepsize,
+#                dgap_tol, prox_max_iter, init=_unmask(
+#                    init[:-1], mask) if init is not None else None,
+#                verbose=verbose)
+#            return maskvec(out.ravel()), info
+
         def f2_prox(w, stepsize, dgap_tol, init=None):
-            out, info = _prox_tvl1_with_intercept(
-                unmaskvec(w), volume_shape, l1_ratio, alpha * stepsize,
-                dgap_tol, prox_max_iter, init=_unmask(
-                    init[:-1], mask) if init is not None else None,
-                verbose=verbose)
+            out, info = _prox_tvl1_with_intercept_hierch(
+                w, volume_shape, l1_ratio, alpha * stepsize,
+                dgap_tol, mask, prox_max_iter, init=init[:-1] if init is not None
+                else None, verbose=verbose)
             return maskvec(out.ravel()), info
 
     # invoke m-FISTA solver
