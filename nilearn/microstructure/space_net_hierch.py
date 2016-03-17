@@ -954,7 +954,7 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
         if not hasattr(self, "masker_"):
             raise RuntimeError("This %s instance is not fitted yet!" % (
                 self.__class__.__name__))
-        X = self.masker_.transform(X)
+#        X = self.masker_.transform(X)
 
         # handle regression (least-squared loss)
         if not self.is_classif:
