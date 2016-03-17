@@ -773,7 +773,8 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
                                        high_pass=self.high_pass,
                                        mask_strategy='epi', t_r=self.t_r,
                                        memory=self.memory_)
-                                       
+
+        self.masker_.fit()
         # X = self.masker_.fit_transform(X)
         # self.mask_img_ = self.masker_.mask_img_
         # self.mask_ = self.mask_img_.get_data().astype(np.bool)
