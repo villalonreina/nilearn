@@ -782,8 +782,6 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
         self.mask_ = self.mask_img_.get_data().astype(np.bool)
         self.mask_length = np.count_nonzero(self.mask_)        
         
-        X_dummy = X[:, :self.mask_length]
-        
         # misc
         self.Xmean_ = X.mean(axis=0)
         self.Xstd_ = X.std(axis=0)
@@ -890,8 +888,11 @@ class BaseSpaceNet(LinearModel, RegressorMixin, CacheMixin):
         # set coefs and intercepts
         self._set_coef_and_intercept(w)
 
-        # unmask weights map as a niimg
-        self.coef_img_ = self.masker_.inverse_transform(self.coef_)
+#         unmask weights map as a niimg
+#         self.coef_img_ = self.masker_.inverse_transform(self.coef_)
+
+        # I can not inverse_transform the coefficients! just give it as a long vector
+        self.coef_img_ = self.coef_
 
         # report time elapsed
         if self.verbose:
