@@ -337,6 +337,7 @@ def _prox_tvl1_with_intercept_hierch(w, shape, l1_ratio, weight, dgap_tol,
     w_j = w[:nvox]
     init_j = init[:nvox]
     prox_info_all = []
+    lowl = nvox
 
     for j in range(measures):
 
@@ -349,9 +350,9 @@ def _prox_tvl1_with_intercept_hierch(w, shape, l1_ratio, weight, dgap_tol,
             w_j.reshape(shape), weight=weight, l1_ratio=l1_ratio,
             dgap_tol=dgap_tol, init=init_j, max_iter=max_iter, verbose=verbose)
 
-        w_j = w[nvox:nvox + nvox]
-        init_j = init[nvox:nvox + nvox]
-        nvox += nvox
+        w_j = w[lowl:lowl + nvox]
+        init_j = init[lowl:lowl + nvox]
+        lowl += nvox
 
         if j == 0:
             out = out_loc

@@ -403,6 +403,7 @@ def _tvl1_objective(X, y, w, alpha, l1_ratio, mask, loss="mse"):
     nvox = np.count_nonzero(mask)
     measures = X_nfeatures/nvox
     out_2 = 0.0
+    lowl = nvox
 
     if loss == "mse":
         out_1 = _squared_loss(X, y, w)
@@ -417,8 +418,8 @@ def _tvl1_objective(X, y, w, alpha, l1_ratio, mask, loss="mse"):
         grad_id = _gradient_id(_unmask(w_j, mask), l1_ratio=l1_ratio)
         out_2 += alpha * _tvl1_objective_from_gradient(grad_id)
 
-        w_j = w[nvox:nvox + nvox]
-        nvox += nvox
+        w_j = w[lowl:lowl + nvox]
+        lowl += nvox
 
     out_all = out_1 + out_2
 
