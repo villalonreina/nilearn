@@ -85,7 +85,7 @@ def fetch_haxby_simple(data_dir=None, url=None, resume=True, verbose=1):
                  conditions_target=[files[3]], description=fdescr)
 
 
-def fetch_haxby(data_dir=None, n_subjects=None, subjects=[2],
+def fetch_haxby(data_dir=None, n_subjects=None, subjects=(2,),
                 fetch_stimuli=False, url=None, resume=True, verbose=1):
     """Download and loads complete haxby dataset
 
@@ -101,9 +101,10 @@ def fetch_haxby(data_dir=None, n_subjects=None, subjects=[2],
         NOTE: n_subjects is deprecated from 0.2.6 and will be removed in 0.3
         Use `subjects` instead.
 
-    subjects : list, optional
-        List of subjects to load from 1 to 6. By default, 2nd subject will be
-        loaded. Empty list returns no subject data.
+    subjects : list or int, optional
+        Either a list of subjects or the number of subjects to load, from 1 to
+        6. By default, 2nd subject will be loaded. Empty list returns no subject
+        data.
 
     fetch_stimuli: boolean, optional
         Indicate if stimuli images must be downloaded. They will be presented
@@ -155,7 +156,8 @@ def fetch_haxby(data_dir=None, n_subjects=None, subjects=[2],
     if isinstance(subjects, numbers.Number) and subjects > 6:
         subjects = 6
 
-    if subjects is not None and isinstance(subjects, list):
+    if subjects is not None and (isinstance(subjects, list) or
+                                 isinstance(subjects, tuple)):
         for sub_id in subjects:
             if sub_id not in [1, 2, 3, 4, 5, 6]:
                 raise ValueError("You provided invalid subject id {0} in a "
@@ -1639,9 +1641,10 @@ def fetch_cobre(n_subjects=10, data_dir=None, url=None, verbose=1):
         warnings.warn('Warning: there are only %d subjects' % max_subjects)
         n_subjects = max_subjects
 
-    n_sz = np.ceil(float(n_subjects) / max_subjects * csv_array['sz'].sum())
-    n_ct = np.floor(float(n_subjects) / max_subjects *
-                    np.logical_not(csv_array['sz']).sum())
+    n_sz = int(np.ceil(float(n_subjects) / max_subjects *
+                       csv_array['sz'].sum()))
+    n_ct = int(np.floor(float(n_subjects) / max_subjects *
+                        np.logical_not(csv_array['sz']).sum()))
 
     # First, restrict the csv files to the adequate number of subjects
     sz_ids = csv_array[csv_array['sz'] == 1.]['id'][:n_sz]

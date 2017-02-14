@@ -37,6 +37,9 @@ class NiftiMapsMasker(BaseMasker, CacheMixin):
     extracted (contrarily to NiftiLabelsMasker). Use case: Summarize brain
     signals from large-scale networks obtained by prior PCA or ICA.
 
+    Note that, Inf or NaN present in the given input images are automatically
+    put to zero rather than considered as missing data.
+
     Parameters
     ----------
     maps_img: 4D niimg-like object
@@ -160,6 +163,9 @@ class NiftiMapsMasker(BaseMasker, CacheMixin):
                    verbose=self.verbose)
 
         self.maps_img_ = _utils.check_niimg_4d(self.maps_img)
+        self.maps_img_ = image.clean_img(self.maps_img_, detrend=False,
+                                         standardize=False,
+                                         ensure_finite=True)
 
         if self.mask_img is not None:
             logger.log("loading mask from %s" %
@@ -275,8 +281,8 @@ class NiftiMapsMasker(BaseMasker, CacheMixin):
             # Check if there is an overlap.
 
             # If float, we set low values to 0
-            dtype = self._resampled_maps_img_.get_data().dtype
             data = self._resampled_maps_img_.get_data()
+            dtype = data.dtype
             if dtype.kind == 'f':
                 data[data < np.finfo(dtype).eps] = 0.
 
